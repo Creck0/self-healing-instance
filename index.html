@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Control</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 50px; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 750px; margin: auto; padding: 30px; background: white; border-radius: 12px; box-shadow: 0px 4px 20px rgba(0,0,0,0.08); }
+        h1 { color: #2c3e50; font-size: 28px; }
+        p { color: #7f8c8d; font-size: 15px; line-height: 1.6; }
+        .btn-stress { background-color: #dc3545; color: white; border: none; padding: 20px 40px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; margin-top: 25px; width: 100%; box-shadow: 0 4px 6px rgba(220, 53, 69, 0.2); }
+        .btn-stress:hover { background-color: #bd2130; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(220, 53, 69, 0.3); }
+        .btn-stress:active { transform: translateY(0); }
+        .alert { margin-top: 25px; padding: 15px; background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 6px; font-size: 14px; text-align: left; }
+        /* Gaya baru untuk wadah grafik */
+        .chart-container { margin-top: 35px; padding-top: 20px; border-top: 2px solid #f1f3f5; width: 100%; height: 350px; }
+        h3 { color: #34495e; font-size: 20px; margin-bottom: 15px; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ Dashboard Control Stress Test</h1>
+        <p>Menekan tombol di bawah ini akan memicu penggunaan <strong>CPU 100%</strong> via AWS Systems Manager (SSM) pada salah satu server Auto Scaling Anda secara acak.</p>
+
+        <form action="/trigger-stress" method="POST">
+            <button type="submit" class="btn-stress">💥 MULAI STRESS TEST NOW</button>
+        </form>
+        <form action="/stop-stress" method="POST">
+            <button type="submit" class="btn-stress">🛑 STOP STRESS TEST NOW</button>
+        </form>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="alert">
+                {{ messages[0] }}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="chart-container">
+            <h3>📈 Live EC2 CPU Utilization per Instance</h3>
+            <canvas id="cpuChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('cpuChart').getContext('2d');
+
+        // Inisialisasi Chart.js dengan kondisi kosong awal
+        const cpuChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 100,
+                        title: { display: true, text: 'CPU (%)' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Time (UTC)' }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // Menyimpan warna tetap untuk masing-masing Instance ID supaya warnanya tidak gonta-ganti pas di-refresh
+        const instanceColors = {};
+        function getColorForInstance(instanceId) {
+            if (!instanceColors[instanceId]) {
+                const letters = '0123456789ABCDEF';
+                let color = '#';
+                for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * 16)]; }
+                instanceColors[instanceId] = color;
+            }
+            return instanceColors[instanceId];
+        }
+
+        // Fungsi fetch data otomatis dari API /api/cpu-data di Python
+        async function updateChart() {
+            try {
+                const response = await fetch('/api/cpu-data');
+                const chartData = await response.json();
+
+                let allLabels = [];
+                const datasets = [];
+
+                // Looping data JSON hasil olahan Boto3
+                for (const [instanceId, info] of Object.entries(chartData)) {
+                    if (info.labels.length > allLabels.length) {
+                        allLabels = info.labels; // Sinkronisasi sumbu waktu X
+                    }
+
+                    datasets.push({
+                        label: instanceId, // ID Instance otomatis jadi legenda
+                        data: info.data,
+                        borderColor: getColorForInstance(instanceId),
+                        backgroundColor: getColorForInstance(instanceId),
+                        fill: false,
+                        tension: 0.2
+                    });
+                }
+
+                // Masukkan data baru dan render ulang grafiknya
+                cpuChart.data.labels = allLabels;
+                cpuChart.data.datasets = datasets;
+                cpuChart.update();
+            } catch (error) {
+                console.error("Gagal mengambil data CPU metrik:", error);
+            }
+        }
+
+        // Jalankan saat halaman pertama kali dibuka, lalu loop refresh otomatis tiap 30 detik
+        updateChart();
+        setInterval(updateChart, 30000);
+    </script>
+</body>
+</html>
