@@ -41,6 +41,6 @@
 - Email notification is automatically sent via SNS when the alarm fires
 
 # Authors
-Adhitya Noer Effendi 235150307111024 
-Irham Dzaki Alfaruq 235150307111025 
-Fadlan Umar Rozikin 235150307111032 
+- Adhitya Noer Effendi 235150307111024 
+- Irham Dzaki Alfaruq 235150307111025 
+- Fadlan Umar Rozikin 235150307111032 
