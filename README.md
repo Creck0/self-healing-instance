@@ -39,3 +39,8 @@
 - Auto Scaling Group automatically scales out (new instances appear)
 - If an instance becomes unhealthy, the ASG automatically self-heals (replaces it)
 - Email notification is automatically sent via SNS when the alarm fires
+
+# Authors
+Adhitya Noer Effendi 235150307111024 
+Irham Dzaki Alfaruq 235150307111025 
+Fadlan Umar Rozikin 235150307111032 
