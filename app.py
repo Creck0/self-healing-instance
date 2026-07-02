@@ -105,23 +105,7 @@ def trigger_stress():
     return redirect(url_for("index"))
 
 
-# HENTIKAN STRESS TEST
-@app.route("/stop-stress", methods=["POST"])
-def stop_stress():
-    instances = get_active_instances()
-    if not instances:
-        flash("Gagal: Tidak ada instance aktif!")
-        return redirect(url_for("index"))
-    try:
-        # Menghentikan paksa semua proses gzip yang berjalan di latar belakang
-        ssm_client.send_command(
-            InstanceIds=instances,
-            DocumentName="AWS-RunShellScript",
-            Parameters={"commands": ["sudo pkill gzip || true"]}
-        )
-        flash("Sukses! Perintah untuk menghentikan Stress Test (pkill gzip) telah dikirim ke semua server.")
-    except Exception as e:
-        flash(f"Gagal menyetop: {str(e)}")
+
 
     return redirect(url_for("index"))
 
